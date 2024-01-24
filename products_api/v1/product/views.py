@@ -21,7 +21,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             filter_args['category'] = self.request.query_params.get('category')
         if self.request.query_params.get('tags'):
             tags = self.request.query_params.get('tags').split(',')
-            filter_args['tags__all'] = tags
+            filter_args['tags__in'] = tags
 
         queryset = queryset.filter(**filter_args)
         search_text = self.request.query_params.get('search')

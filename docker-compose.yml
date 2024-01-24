@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  api:
+    build: .
+    image: products-api
+    command: >
+      bash -c "until pg_isready --username=user --host=postgres; do sleep 1; done;
+      python products_api/manage.py makemigrations &&
+      python products_api/manage.py migrate &&
+      python products_api/manage.py runserver 0.0.0.0:8000"    depends_on:
+      - postgres
+    volumes:
+      - .:/app
+    environment:
+      - DEBUG=true
+      - ENVIRONMENT=development
+      - PYTHONUNBUFFERED=1
+      - PYTHONIOENCODING=utf-8
+    ports:
+      - 8000:8000
+
+  postgres:
+    image: postgres
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=products_db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    ports:
+      - 15433:5432
+
+volumes:
+  postgres:

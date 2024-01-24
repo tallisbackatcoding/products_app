@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html ng-app="myApp">
+<head>
+    <title>AngularJS Fetch API Example</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            margin-right: 10px;
+            width: 200px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background-color: #fff;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+         .container {
+            display: flex;
+        }
+
+        .sidebar {
+            flex: 0 0 200px; /* Fixed width */
+            padding: 10px;
+            border-right: 2px solid #ddd;
+            height: 100vh;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            padding: 10px;
+        }
+                .container {
+            display: flex;
+        }
+
+        .sidebar {
+            flex: 0 0 200px; /* Fixed width */
+            padding: 10px;
+            border-right: 2px solid #ddd;
+            height: 100vh;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            padding: 10px;
+        }
+        .selected {
+            background-color: #007bff;
+            color: white;
+        }
+        .item-description {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+
+
+<div ng-controller="myController" class="container">
+    <div class="sidebar">
+        <h3>Categories</h3>
+        <ul>
+            <li ng-repeat="category in categories"
+                ng-click="selectCategory(category.id)"
+                ng-class="{'selected': selectedCategoryId === category.id}">
+                {{ category.name }}
+            </li>
+        </ul>
+
+        <h3>Tags</h3>
+        <ul>
+            <li ng-repeat="tag in tags"
+                ng-click="toggleTagSelection(tag.id)"
+                ng-class="{'selected': selectedTagIds.indexOf(tag.id) !== -1}">
+                {{ tag.name }}
+            </li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <input type="text" ng-model="searchQuery" placeholder="Search by name">
+        <button ng-click="searchProducts()">Search</button>
+
+        <div ng-show="items.length === 0">
+            No results found.
+        </div>
+            <ul>
+                <li ng-repeat="item in items" ng-click="selectItem(item)">
+                    {{ item.name }}
+                    <div ng-show="selectedItem && selectedItem.id === item.id" class="item-description">
+                        <h4>Description:</h4>
+                        {{ selectedItem.description }}
+                        <h4>Category:</h4>
+                        {{ selectedItem.category }}
+                        <h4>Tags:</h4>
+                        <ul>
+                            <li ng-repeat="tag in selectedItem.tags">
+                                {{ tag }}
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+            </ul>
+
+        <div class="pagination-buttons">
+            <button ng-click="previousPage()" ng-disabled="!previous">Previous</button>
+            <button ng-click="nextPage()" ng-disabled="!next">Next</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    var app = angular.module('myApp', []);
+    app.controller('myController', function($scope, $http) {
+        $scope.searchQuery = '';
+        $scope.items = [];
+        $scope.categories = [];
+        $scope.tags = [];
+        $scope.selectedCategoryId = null;
+        $scope.selectedTagIds = [];
+        $scope.offset = 0;
+        $scope.limit = 20;
+        $scope.next = null;
+        $scope.previous = null;
+        $scope.selectedItem = null;
+
+        $scope.selectItem = function(item) {
+            if ($scope.selectedItem === item) {
+                $scope.selectedItem = null; // Deselect if already selected
+            } else {
+                $scope.selectedItem = item;
+
+                // Get category name from the category list
+                $scope.selectedItem.category = item.category;
+
+                // Get unique tag names from the tag list
+                $scope.selectedItem.tags = item.tags;
+            }
+        };
+
+
+        $scope.fetchCategories = function() {
+            $http.get('http://localhost:8000/api/v1/categories/')
+                .then(function(response) {
+                    $scope.categories = response.data;
+                }, function(error) {
+                    console.error('Error fetching categories:', error);
+                });
+        };
+
+        $scope.fetchTags = function() {
+            $http.get('http://localhost:8000/api/v1/tags/')
+                .then(function(response) {
+                    $scope.tags = response.data;
+                }, function(error) {
+                    console.error('Error fetching tags:', error);
+                });
+        };
+
+        $scope.selectCategory = function(categoryId) {
+            if ($scope.selectedCategoryId === categoryId) {
+                $scope.selectedCategoryId = null;
+            } else {
+                $scope.selectedCategoryId = categoryId;
+            }
+            $scope.searchProducts();
+        };
+
+        $scope.toggleTagSelection = function(tagId) {
+            var index = $scope.selectedTagIds.indexOf(tagId);
+            if (index === -1) {
+                $scope.selectedTagIds.push(tagId);
+            } else {
+                $scope.selectedTagIds.splice(index, 1);
+            }
+            $scope.searchProducts();
+        };
+        $scope.buildQueryParams = function() {
+            var params = [];
+            if ($scope.searchQuery) {
+                params.push('search=' + encodeURIComponent($scope.searchQuery));
+            }
+            if ($scope.selectedCategoryId) {
+                params.push('category=' + $scope.selectedCategoryId);
+            }
+            if ($scope.selectedTagIds.length > 0) {
+                params.push('tags=' + $scope.selectedTagIds.join(','));
+            }
+            params.push('limit=' + $scope.limit);
+            params.push('offset=' + $scope.offset);
+            return params.join('&');
+        };
+    $scope.getCategoryName = function(categoryId) {
+        var category = $scope.categories.find(function(cat) {
+            return cat.id === categoryId;
+        });
+        return category ? category.name : 'N/A';
+    };
+
+    $scope.getTagName = function(tagId) {
+        var tag = $scope.tags.find(function(t) {
+            return t.id === tagId;
+        });
+        return tag ? tag.name : 'N/A';
+    };
+     $scope.searchProducts = function() {
+            var url = 'http://localhost:8000/api/v1/products';
+            var queryParams = $scope.buildQueryParams();
+            var fullUrl = url + '?' + queryParams;
+
+            $http.get(fullUrl)
+                .then(function(response) {
+                    $scope.items = response.data.results;
+                    $scope.next = response.data.next !== null;
+                    $scope.previous = response.data.previous !== null;
+                }, function(error) {
+                    console.error('Error fetching products:', error);
+                });
+        };
+
+        $scope.nextPage = function() {
+            if ($scope.next) {
+                $scope.offset += $scope.limit;
+                $scope.searchProducts();
+            }
+        };
+
+        $scope.previousPage = function() {
+            if ($scope.previous) {
+                $scope.offset = Math.max(0, $scope.offset - $scope.limit);
+                $scope.searchProducts();
+            }
+        };
+
+        $scope.fetchCategories();
+        $scope.fetchTags();
+        $scope.searchProducts();
+    });
+</script>
+
+</body>
+</html>
